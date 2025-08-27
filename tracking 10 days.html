@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>10‑Day Tracker • 8×3‑Hour Blocks</title>
+  <style>
+    :root{
+      --bg:#0f1115; --card:#141822; --ink:#e6e9ef; --muted:#9aa4b2; --accent:#7aa2ff; --done:#34d399; --outline:#232838;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Helvetica,Arial,sans-serif; color:var(--ink);
+      background:radial-gradient(1200px 800px at 20% -10%, #1a2130 0%, #10131a 40%, #0b0d12 100%), var(--bg);
+      letter-spacing:.2px;
+    }
+    header{
+      position:sticky; top:0; z-index:10; backdrop-filter:blur(8px);
+      background:linear-gradient(180deg, rgba(15,17,21,.9) 0%, rgba(15,17,21,.7) 60%, rgba(15,17,21,0) 100%);
+      border-bottom:1px solid var(--outline);
+    }
+    .wrap{max-width:1200px; margin:0 auto; padding:16px 20px}
+    h1{margin:0; font-size:22px; font-weight:700; letter-spacing:.4px}
+    .sub{font-size:13px; color:var(--muted)}
+    .controls{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+    button, .pill{
+      appearance:none; border:1px solid var(--outline); background:#0e1320; color:var(--ink);
+      padding:8px 12px; border-radius:999px; font-weight:600; font-size:13px; cursor:pointer;
+      box-shadow:0 2px 8px rgba(0,0,0,.2), inset 0 0 0 1px rgba(255,255,255,.02);
+      transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+    button:hover{transform:translateY(-1px); border-color:#263044; box-shadow:0 10px 20px rgba(0,0,0,.35)}
+    button:active{transform:translateY(0)}
+
+    .legend{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted)}
+    .swatch{width:12px; height:12px; border-radius:3px; border:1px solid var(--outline)}
+    .swatch.block{background:#1b2130}
+    .swatch.on{background:var(--accent)}
+    .swatch.done{background:var(--done)}
+
+    main{padding:20px}
+    .grid{
+      display:grid; gap:14px;
+      grid-template-columns:repeat(auto-fill, minmax(220px,1fr));
+    }
+
+    .day{
+      background:linear-gradient(180deg,#141a25 0%,#121722 100%);
+      border:1px solid var(--outline);
+      border-radius:16px; padding:12px; position:relative;
+      box-shadow:0 8px 18px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02);
+      transform-style:preserve-3d; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .day:hover{ transform:translateY(-4px) rotateX(1.5deg) rotateY(.7deg);
+      box-shadow:0 18px 35px rgba(0,0,0,.55);
+      border-color:#273148
+    }
+    .day.done{ border-color:rgba(52,211,153,.6); box-shadow:0 14px 28px rgba(0,0,0,.5), 0 0 0 2px rgba(52,211,153,.15) inset }
+
+    .head{
+      display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px
+    }
+    .head{ position:relative; z-index:0 }
+    .label{font-weight:700; font-size:14px}
+    .tools{display:flex; gap:6px}
+    .chip{font-size:11px; padding:3px 8px; border-radius:10px; border:1px dashed var(--outline); color:var(--muted)}
+    .toggle-day{font-size:12px; font-weight:700; border-radius:8px; padding:6px 8px}
+
+    .blocks{
+      display:grid; grid-template-columns:repeat(8, 1fr); gap:6px; 
+      position:relative; z-index:2; pointer-events:auto;
+      background:#0e1422; border-radius:10px; padding:6px; border:1px solid var(--outline);
+    }
+    .blk{
+      aspect-ratio: 5 / 3; /* breadth wider than length */
+      border-radius:8px; border:1px solid #22283a; background:linear-gradient(180deg,#0f1522,#0c111b);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.02), 0 6px 10px rgba(0,0,0,.25);
+      transition:transform .12s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
+      cursor:pointer; position:relative; z-index:3; pointer-events:auto;
+    }
+    .blk:hover{ transform:translateY(-2px) }
+    .blk.on{ background:linear-gradient(180deg, #263459, #1b2741); border-color:#334166; box-shadow:inset 0 0 0 1px rgba(122,162,255,.25), 0 8px 14px rgba(0,0,0,.35) }
+
+    .foot{ display:flex; justify-content:space-between; align-items:center; margin-top:10px; position:relative; z-index:0 }
+    .small{ font-size:11px; color:var(--muted)}
+    .progress{
+      height:6px; width:100%; background:#0c1220; border:1px solid var(--outline); border-radius:999px; overflow:hidden; margin-left:8px;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    .progress>i{ display:block; height:100%; width:0%; background:linear-gradient(90deg, var(--accent), #a7b7ff); transition:width .2s ease }
+    .check{ width:18px; height:18px; border-radius:6px; border:1px solid var(--outline); display:grid; place-items:center; cursor:pointer }
+    .check svg{ opacity:.35; transition:opacity .12s ease }
+    .day.done .check{ border-color:rgba(52,211,153,.7); background:rgba(52,211,153,.1) }
+    .day.done .check svg{ opacity:1 }
+
+    footer{color:var(--muted); font-size:12px; text-align:center; padding:24px}
+    a{color:#a7b7ff}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>10‑Day Tracker <span class="sub">• 8 blocks × 3 hours per day</span></h1>
+      <div class="controls">
+        <button id="toggle-all">Toggle All Days Complete</button>
+        <button id="clear">Reset Everything</button>
+        <span class="pill" id="stats">Loading…</span>
+        <span class="legend">
+          <span class="swatch block"></span> Block •
+          <span class="swatch on"></span> Active •
+          <span class="swatch done"></span> Day Done
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="grid" class="grid" aria-live="polite"></div>
+  </main>
+
+  <footer>
+    Built for 3‑hour sprinting. Data is saved automatically to your browser (localStorage). Hover for subtle 3D motion. Click blocks to toggle; click the ✓ to mark a day done.
+  </footer>
+
+  <script>
+    const DAYS_TOTAL = 10;         // number of day cards
+    const BLOCKS_PER_DAY = 8;       // 8 × 3‑hour blocks
+    const STORE_KEY = 'tracker10_v1';
+
+    function loadState(){
+      try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {} }catch{ return {} }
+    }
+    function saveState(state){ localStorage.setItem(STORE_KEY, JSON.stringify(state)) }
+
+    const state = loadState();
+    if(!state.days){
+      state.days = Array.from({length:DAYS_TOTAL}, (_,i)=>({done:false, blocks:Array(BLOCKS_PER_DAY).fill(false)}));
+    }
+
+    const grid = document.getElementById('grid');
+
+    function render(){
+      grid.innerHTML='';
+      let totalBlocks=0, completedBlocks=0, daysDone=0;
+
+      state.days.forEach((day, i)=>{
+        totalBlocks += BLOCKS_PER_DAY;
+        completedBlocks += day.blocks.filter(Boolean).length;
+        if(day.done) daysDone++;
+
+        const card = document.createElement('section');
+        card.className = 'day' + (day.done ? ' done' : '');
+        card.setAttribute('data-day', i+1);
+
+        const head = document.createElement('div'); head.className='head';
+        const label = document.createElement('div'); label.className='label'; label.textContent = `Day ${i+1}`;
+        const tools = document.createElement('div'); tools.className='tools';
+
+        const doneBtn = document.createElement('button');
+        doneBtn.className='toggle-day'; doneBtn.title='Mark day complete';
+        doneBtn.innerHTML = '✓';
+        doneBtn.addEventListener('click', (e)=>{ e.stopPropagation(); day.done = !day.done; saveState(state); render(); });
+
+        const chip = document.createElement('span'); chip.className='chip';
+        chip.textContent = `${day.blocks.filter(Boolean).length}/${BLOCKS_PER_DAY}`;
+
+        tools.append(chip, doneBtn);
+        head.append(label, tools);
+
+        const blocks = document.createElement('div'); blocks.className='blocks';
+        day.blocks.forEach((on, bi)=>{
+          const b = document.createElement('div'); b.className='blk' + (on ? ' on':'' ); b.title = `Block ${bi+1} (3h)`;
+          b.addEventListener('click', ()=>{ day.blocks[bi] = !day.blocks[bi]; saveState(state); render(); });
+          blocks.appendChild(b);
+        });
+
+        const foot = document.createElement('div'); foot.className='foot';
+        const small = document.createElement('div'); small.className='small';
+        small.textContent = day.done ? 'Completed' : 'In progress';
+        const wrap = document.createElement('div'); wrap.style.display='flex'; wrap.style.alignItems='center'; wrap.style.gap='8px';
+        const prog = document.createElement('div'); prog.className='progress';
+        const bar = document.createElement('i'); bar.style.width = (day.blocks.filter(Boolean).length / BLOCKS_PER_DAY * 100).toFixed(1) + '%';
+        prog.appendChild(bar); wrap.appendChild(prog);
+
+        const check = document.createElement('div'); check.className='check';
+        check.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        check.addEventListener('click', (e)=>{ e.stopPropagation(); day.done = !day.done; saveState(state); render(); });
+        wrap.appendChild(check);
+
+        foot.append(small, wrap);
+
+        card.append(head, blocks, foot);
+        grid.appendChild(card);
+      });
+
+      const pct = Math.round((completedBlocks / totalBlocks) * 100);
+      document.getElementById('stats').textContent = `${completedBlocks}/${totalBlocks} blocks • ${pct}% • ${daysDone}/${DAYS_TOTAL} days done`;
+    }
+
+    // Controls
+    document.getElementById('clear').addEventListener('click',()=>{
+      if(confirm('Reset all progress?')){
+        state.days.forEach(d=>{ d.done=false; d.blocks=Array(BLOCKS_PER_DAY).fill(false); });
+        saveState(state); render();
+      }
+    });
+    document.getElementById('toggle-all').addEventListener('click',()=>{
+      const allDone = state.days.every(d=>d.done);
+      state.days.forEach(d=> d.done = !allDone );
+      saveState(state); render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
